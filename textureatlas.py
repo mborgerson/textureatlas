@@ -278,7 +278,7 @@ class BinaryTextureAtlasMap(TextureAtlasMap):
         frm_section_len *= frm_fmt_len
 
         # Write Header
-        fd.write('TEXA')
+        fd.write(b'TEXA')
         fd.write(struct.pack(hdr_fmt, self._atlas.width,
                                       self._atlas.height,
                                       len(self._atlas.textures),
@@ -298,7 +298,7 @@ class BinaryTextureAtlasMap(TextureAtlasMap):
 
         # Write String Section
         for t in self._atlas.textures:
-            fd.write(t.name + '\x00')
+            fd.write(t.name.encode('utf-8') + b'\x00')
 
         # Write Frame Section
         for t in self._atlas.textures:
@@ -338,7 +338,7 @@ def main():
     filename, ext = os.path.splitext(args.outfile)
 
     if ext == '':
-        print 'Error: Specify an image extension for outfile (e.g. atlas.png).'
+        print('Error: Specify an image extension for outfile (e.g. atlas.png).')
         exit(1)
 
     # Parse texture names
