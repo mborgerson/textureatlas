@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.6)
+project(TEXTUREATLAS)
+include_directories(include)
+add_library(textureatlas src/textureatlas.c)
+add_subdirectory(tools)
