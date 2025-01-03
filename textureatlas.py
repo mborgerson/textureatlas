@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2014-2024 Matt Borgerson
+# Copyright (c) 2014-2025 Matt Borgerson
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@ mapped in the atlas."""
 
 import PIL.Image as Image
 import argparse
+import json
 import os.path
 import re
 import shlex
@@ -308,6 +309,27 @@ class BinaryTextureAtlasMap(TextureAtlasMap):
                                               f.width,
                                               f.height))
 
+
+class JsonTextureAtlasMap(TextureAtlasMap):
+    def __init__(self, atlas):
+        super(JsonTextureAtlasMap, self).__init__(atlas)
+
+    def write(self, file):
+        """Writes the JSON texture atlas map."""
+        atlas = {}
+
+        for t in self._atlas.textures:
+            atlas[t.name] = []
+            for f in t.frames:
+                x = f.x
+                y = (self._atlas.height-1)-f.y-(f.height-1)
+                w = f.width
+                h = f.height
+                atlas[t.name].append((x, y, w, h))
+
+        json.dump(atlas, file, indent=2)
+
+
 def main():
     # Parse arguments
     arg_parser = argparse.ArgumentParser(description=DESCRIPTION,
@@ -318,6 +340,8 @@ def main():
                             type=str,
                             default='atlas.png',
                             help='output filename (atlas.png)')
+    arg_parser.add_argument('--map-output')
+    arg_parser.add_argument('--map-format', choices={'json', 'binary'}, default='json')
     arg_parser.add_argument('-m', '--mode',
                             metavar='mode',
                             type=str,
@@ -345,7 +369,7 @@ def main():
     textures = []
     for texture in args.textures:
         # Look for a texture name
-        matches = re.match('^((\w+)=)?(.+)', texture)
+        matches = re.match(r'^((\w+)=)?(.+)', texture)
         name, frames = matches.group(2), shlex.split(matches.group(3))
 
         # If no name was specified, use the first frame's filename
@@ -366,11 +390,16 @@ def main():
     for texture in textures:
         atlas.pack(texture)
 
-    # Write atlas and map file
     atlas.write(args.outfile, args.mode)
-    f = open(filename+'.map', 'wb')
-    BinaryTextureAtlasMap(atlas).write(f)
-    f.close()
+    map_path = args.map_output or args.filename + '.map'
+
+    match args.map_format:
+        case 'json':
+            with open(map_path, 'w', encoding='utf-8') as file:
+                JsonTextureAtlasMap(atlas).write(file)
+        case 'binary':
+            with open(map_path, 'wb') as file:
+                BinaryTextureAtlasMap(atlas).write(file)
 
 if __name__ == '__main__':
     main()
