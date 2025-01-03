@@ -21,6 +21,8 @@
 # SOFTWARE.
 #
 
+from __future__ import annotations
+
 import argparse
 import json
 import os.path
@@ -51,11 +53,12 @@ class Rect:
 class PackRegion(Rect):
     """A region that Rect objects can be packed into."""
 
+    subregion_1: PackRegion | None = None
+    subregion_2: PackRegion | None = None
+    packable: Rect | None = None
+
     def __init__(self, x: int, y: int, width: int, height: int):
         super().__init__(x, y, width, height)
-        self.subregion_1: PackRegion | None = None
-        self.subregion_2: PackRegion | None = None
-        self.packable: Rect | None = None
 
     def pack(self, packable: Rect) -> bool:
         """Pack 2D packable into this region."""
@@ -83,6 +86,9 @@ class PackRegion(Rect):
             )
             return True
 
+        assert self.subregion_1 is not None
+        assert self.subregion_2 is not None
+
         # Pack into sub-region
         if self.subregion_1.perimeter > self.subregion_2.perimeter:
             return self.subregion_1.pack(packable) or self.subregion_2.pack(packable)
@@ -92,6 +98,10 @@ class PackRegion(Rect):
         """List all unpopulated regions."""
         if self.packable is None:
             return [self]
+
+        assert self.subregion_1 is not None
+        assert self.subregion_2 is not None
+
         return self.subregion_1.get_free_regions() + self.subregion_2.get_free_regions()
 
 
@@ -130,7 +140,7 @@ class TextureAtlas(PackRegion):
         super().__init__(0, 0, width, height)
         self.textures: list[Texture] = []
 
-    def pack(self, texture: Texture) -> bool:
+    def pack_texture(self, texture: Texture) -> bool:
         """Pack a Texture into this atlas."""
         self.textures.append(texture)
         for frame in texture.frames:
@@ -317,6 +327,8 @@ def main():
     for texture in args.textures:
         # Look for a texture name
         matches = re.match(r"^((\w+)=)?(.+)", texture)
+        assert matches
+
         name, frames = matches.group(2), shlex.split(matches.group(3))
 
         # If no name was specified, use the first frame's filename
@@ -330,12 +342,12 @@ def main():
     finished = False
     largest_frame = textures[0].frames[0]
     width, height = largest_frame.width, largest_frame.height
+    atlas = TextureAtlas(width, height)
 
     while not finished:
-        atlas = TextureAtlas(width, height)
         finished = True
         for texture in textures:
-            if atlas.pack(texture):
+            if atlas.pack_texture(texture):
                 continue
 
             # Failed to pack the texture. Make the atlas larger...
@@ -347,10 +359,11 @@ def main():
                 width += texture.frames[0].width
             else:
                 height += texture.frames[0].height
+            atlas = TextureAtlas(width, height)
             break
 
     atlas.write(args.outfile, args.mode)
-    map_path = args.map_output or filename + ".map"
+    map_path = args.map_output or (filename + ".map")
 
     match args.map_format:
         case "json":
