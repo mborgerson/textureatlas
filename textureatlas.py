@@ -44,7 +44,7 @@ class Rect:
     height: int
 
     @property
-    def perimeter(self) -> None:
+    def perimeter(self) -> int:
         return 2 * (self.width + self.height)
 
 
@@ -88,7 +88,7 @@ class PackRegion(Rect):
             return self.subregion_1.pack(packable) or self.subregion_2.pack(packable)
         return self.subregion_2.pack(packable) or self.subregion_1.pack(packable)
 
-    def get_free_regions(self) -> list[PackRegion]:
+    def get_free_regions(self) -> list["PackRegion"]:
         """List all unpopulated regions."""
         if self.packable is None:
             return [self]
