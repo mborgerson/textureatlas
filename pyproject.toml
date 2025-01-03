@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "textureatas"
+version = "0.0.0.dev0"
+description = "A simple tool for making a texture atlas"
+authors = [{name = "Matt Borgerson", email = "contact@mborgerson.com"}]
+license = {file = "LICENSE.txt"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pillow"
+]
+
+[project.urls]
+Home = "https://github.com/mborgerson/textureatlas"
+
+[tool.setuptools]
+packages = ["textureatlas"]
