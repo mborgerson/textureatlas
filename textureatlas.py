@@ -88,6 +88,11 @@ class PackRegion(Rect):
             return self.subregion_1.pack(packable) or self.subregion_2.pack(packable)
         return self.subregion_2.pack(packable) or self.subregion_1.pack(packable)
 
+    def get_free_regions(self) -> list[PackRegion]:
+        """List all unpopulated regions."""
+        if self.packable is None:
+            return [self]
+        return self.subregion_1.get_free_regions() + self.subregion_2.get_free_regions()
 
 
 class Frame(Rect):
@@ -125,12 +130,13 @@ class TextureAtlas(PackRegion):
         super().__init__(0, 0, width, height)
         self.textures: list[Texture] = []
 
-    def pack(self, texture: Texture) -> None:
+    def pack(self, texture: Texture) -> bool:
         """Pack a Texture into this atlas."""
         self.textures.append(texture)
         for frame in texture.frames:
             if not super().pack(frame):
-                raise Exception("Failed to pack frame %s" % frame.filename)
+                return False
+        return True
 
     def write(self, filename: str, mode: str) -> None:
         """Generates the final texture atlas."""
@@ -296,14 +302,6 @@ def main():
         help="output file mode (RGBA)",
     )
     arg_parser.add_argument(
-        "-s",
-        "--size",
-        metavar="size",
-        type=int,
-        default=512,
-        help="size of atlas (n x n)",
-    )
-    arg_parser.add_argument(
         "textures", metavar="texture", type=str, nargs="+", help="filename of texture"
     )
 
@@ -328,13 +326,28 @@ def main():
         textures.append(Texture(name, [Frame(f) for f in frames]))
 
     # Sort textures by perimeter size in non-increasing order
-    textures = sorted(textures, key=lambda i: i.frames[0].perimeter, reverse=True)
+    textures = sorted(textures, key=lambda t: t.frames[0].perimeter, reverse=True)
+    finished = False
+    largest_frame = textures[0].frames[0]
+    width, height = largest_frame.width, largest_frame.height
 
-    # Create the atlas and pack textures in
-    atlas = TextureAtlas(args.size, args.size)
+    while not finished:
+        atlas = TextureAtlas(width, height)
+        finished = True
+        for texture in textures:
+            if atlas.pack(texture):
+                continue
 
-    for texture in textures:
-        atlas.pack(texture)
+            # Failed to pack the texture. Make the atlas larger...
+            finished = False
+            biggest_free_space = max(
+                atlas.get_free_regions(), key=lambda r: r.perimeter
+            )
+            if biggest_free_space.width < texture.frames[0].width:
+                width += texture.frames[0].width
+            else:
+                height += texture.frames[0].height
+            break
 
     atlas.write(args.outfile, args.mode)
     map_path = args.map_output or filename + ".map"
