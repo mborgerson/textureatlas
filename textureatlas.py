@@ -84,7 +84,9 @@ class PackRegion(Rect):
             return True
 
         # Pack into sub-region
-        return self.subregion_1.pack(packable) or self.subregion_2.pack(packable)
+        if self.subregion_1.perimeter > self.subregion_2.perimeter:
+            return self.subregion_1.pack(packable) or self.subregion_2.pack(packable)
+        return self.subregion_2.pack(packable) or self.subregion_1.pack(packable)
 
 
 
