@@ -34,18 +34,20 @@ import re
 import shlex
 import struct
 
+
 class Packable(object):
     """A two-dimensional object with position information."""
 
     def __init__(self, width, height):
-        self._x      = 0
-        self._y      = 0
-        self._width  = width
+        self._x = 0
+        self._y = 0
+        self._width = width
         self._height = height
 
     @property
     def x(self):
         return self._x
+
     @x.setter
     def x(self, value):
         self._x = value
@@ -53,6 +55,7 @@ class Packable(object):
     @property
     def y(self):
         return self._y
+
     @y.setter
     def y(self, value):
         self._y = value
@@ -67,19 +70,20 @@ class Packable(object):
 
     @property
     def perimeter(self):
-        return 2*self._width + 2*self._height
+        return 2 * self._width + 2 * self._height
+
 
 class PackRegion(object):
     """A region that two-dimensional Packable objects can be packed into."""
 
     def __init__(self, x, y, width, height):
         """Constructor."""
-        self._x        = x
-        self._y        = y
-        self._width    = width
-        self._height   = height
-        self._sub1     = None
-        self._sub2     = None
+        self._x = x
+        self._y = y
+        self._width = width
+        self._height = height
+        self._sub1 = None
+        self._sub2 = None
         self._packable = None
 
     @property
@@ -105,16 +109,18 @@ class PackRegion(object):
     def get_all_packables(self):
         """Returns a list of all Packables in this region and sub-regions."""
         if self._packable:
-            return [self._packable] + self._sub1.get_all_packables() + \
-                                      self._sub2.get_all_packables()
+            return (
+                [self._packable]
+                + self._sub1.get_all_packables()
+                + self._sub2.get_all_packables()
+            )
         return []
 
     def pack(self, packable):
         """Pack 2D packable into this region."""
         if not self._packable:
             # Is there room to pack this?
-            if (packable.width  > self._width) or \
-               (packable.height > self._height):
+            if (packable.width > self._width) or (packable.height > self._height):
                 return False
 
             # Pack
@@ -125,18 +131,23 @@ class PackRegion(object):
             self._packable.y = self._y
 
             # Create sub-regions
-            self._sub1 = PackRegion(self._x,
-                                    self._y+self._packable.height,
-                                    self._packable.width,
-                                    self._height-self._packable.height)
-            self._sub2 = PackRegion(self._x+self._packable.width,
-                                    self._y,
-                                    self._width-self._packable.width,
-                                    self._height)
+            self._sub1 = PackRegion(
+                self._x,
+                self._y + self._packable.height,
+                self._packable.width,
+                self._height - self._packable.height,
+            )
+            self._sub2 = PackRegion(
+                self._x + self._packable.width,
+                self._y,
+                self._width - self._packable.width,
+                self._height,
+            )
             return True
 
         # Pack into sub-region
         return self._sub1.pack(packable) or self._sub2.pack(packable)
+
 
 class Frame(Packable):
     """An image file that can be packed into a PackRegion."""
@@ -161,11 +172,12 @@ class Frame(Packable):
         image.paste(i, (self.x, self.y))
         del i
 
+
 class Texture(object):
     """A collection of one or more frames."""
 
     def __init__(self, name, frames):
-        self._name   = name
+        self._name = name
         self._frames = frames
 
     @property
@@ -175,6 +187,7 @@ class Texture(object):
     @property
     def frames(self):
         return self._frames
+
 
 class TextureAtlas(PackRegion):
     """Texture Atlas generator."""
@@ -192,7 +205,7 @@ class TextureAtlas(PackRegion):
         self._textures.append(texture)
         for frame in texture.frames:
             if not super(TextureAtlas, self).pack(frame):
-                raise Exception('Failed to pack frame %s' % frame.filename)
+                raise Exception("Failed to pack frame %s" % frame.filename)
 
     def write(self, filename, mode):
         """Generates the final texture atlas."""
@@ -202,6 +215,7 @@ class TextureAtlas(PackRegion):
                 f.draw(out)
         out.save(filename)
 
+
 class TextureAtlasMap(object):
     """Texture Atlas Map file generator."""
 
@@ -210,7 +224,8 @@ class TextureAtlasMap(object):
 
     def write(self, fd):
         """Writes the texture atlas map file into file object fd."""
-        raise Exception('Not Implemented')
+        raise Exception("Not Implemented")
+
 
 class BinaryTextureAtlasMap(TextureAtlasMap):
     """Binary Texture Atlas Map file generator.
@@ -260,54 +275,57 @@ class BinaryTextureAtlasMap(TextureAtlasMap):
     def write(self, fd):
         """Writes the binary texture atlas map file into file object fd."""
         # Calculate offset and size of each section
-        hdr_fmt = 'IIIIIIIII'
+        hdr_fmt = "IIIIIIIII"
         hdr_fmt_len = struct.calcsize(hdr_fmt)
-        hdr_section_len = hdr_fmt_len+4 # Header + Magic
+        hdr_section_len = hdr_fmt_len + 4  # Header + Magic
 
-        tex_fmt = 'III'
+        tex_fmt = "III"
         tex_fmt_len = struct.calcsize(tex_fmt)
         tex_section_off = hdr_section_len
-        tex_section_len = len(self._atlas.textures)*tex_fmt_len
+        tex_section_len = len(self._atlas.textures) * tex_fmt_len
 
-        str_section_off = tex_section_off+tex_section_len
-        str_section_len = sum(map(lambda t:len(t.name)+1, self._atlas.textures))
+        str_section_off = tex_section_off + tex_section_len
+        str_section_len = sum(map(lambda t: len(t.name) + 1, self._atlas.textures))
 
-        frm_fmt = 'IIII'
+        frm_fmt = "IIII"
         frm_fmt_len = struct.calcsize(frm_fmt)
         frm_section_off = str_section_off + str_section_len
-        frm_section_len = sum(map(lambda t:len(t.frames), self._atlas.textures))
+        frm_section_len = sum(map(lambda t: len(t.frames), self._atlas.textures))
         frm_section_len *= frm_fmt_len
 
         # Write Header
-        fd.write(b'TEXA')
-        fd.write(struct.pack(hdr_fmt, self._atlas.width,
-                                      self._atlas.height,
-                                      len(self._atlas.textures),
-                                      tex_section_off, tex_section_len,
-                                      str_section_off, str_section_len,
-                                      frm_section_off, frm_section_len))
+        fd.write(b"TEXA")
+        fd.write(
+            struct.pack(
+                hdr_fmt,
+                self._atlas.width,
+                self._atlas.height,
+                len(self._atlas.textures),
+                tex_section_off,
+                tex_section_len,
+                str_section_off,
+                str_section_len,
+                frm_section_off,
+                frm_section_len,
+            )
+        )
 
         # Write Texture Section
         str_offset = 0
         frm_offset = 0
         for t in self._atlas.textures:
-            fd.write(struct.pack(tex_fmt, str_offset,
-                                          len(t.frames),
-                                          frm_offset))
-            str_offset += len(t.name)+1 # +1 for sentinel byte
-            frm_offset += len(t.frames)*frm_fmt_len
+            fd.write(struct.pack(tex_fmt, str_offset, len(t.frames), frm_offset))
+            str_offset += len(t.name) + 1  # +1 for sentinel byte
+            frm_offset += len(t.frames) * frm_fmt_len
 
         # Write String Section
         for t in self._atlas.textures:
-            fd.write(t.name.encode('utf-8') + b'\x00')
+            fd.write(t.name.encode("utf-8") + b"\x00")
 
         # Write Frame Section
         for t in self._atlas.textures:
             for f in t.frames:
-                fd.write(struct.pack(frm_fmt, f.x,
-                                              f.y,
-                                              f.width,
-                                              f.height))
+                fd.write(struct.pack(frm_fmt, f.x, f.y, f.width, f.height))
 
 
 class JsonTextureAtlasMap(TextureAtlasMap):
@@ -322,7 +340,7 @@ class JsonTextureAtlasMap(TextureAtlasMap):
             atlas[t.name] = []
             for f in t.frames:
                 x = f.x
-                y = (self._atlas.height-1)-f.y-(f.height-1)
+                y = (self._atlas.height - 1) - f.y - (f.height - 1)
                 w = f.width
                 h = f.height
                 atlas[t.name].append((x, y, w, h))
@@ -332,44 +350,51 @@ class JsonTextureAtlasMap(TextureAtlasMap):
 
 def main():
     # Parse arguments
-    arg_parser = argparse.ArgumentParser(description=DESCRIPTION,
-                                         formatter_class=argparse.RawDescriptionHelpFormatter)
-    arg_parser.add_argument('-o',
-                            dest='outfile',
-                            metavar='output-file',
-                            type=str,
-                            default='atlas.png',
-                            help='output filename (atlas.png)')
-    arg_parser.add_argument('--map-output')
-    arg_parser.add_argument('--map-format', choices={'json', 'binary'}, default='json')
-    arg_parser.add_argument('-m', '--mode',
-                            metavar='mode',
-                            type=str,
-                            default='RGBA',
-                            help='output file mode (RGBA)')
-    arg_parser.add_argument('-s', '--size',
-                            metavar='size',
-                            type=int,
-                            default=512,
-                            help='size of atlas (n x n)')
-    arg_parser.add_argument('textures',
-                            metavar='texture',
-                            type=str,
-                            nargs='+',
-                            help='filename of texture')
+    arg_parser = argparse.ArgumentParser(
+        description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    arg_parser.add_argument(
+        "-o",
+        dest="outfile",
+        metavar="output-file",
+        type=str,
+        default="atlas.png",
+        help="output filename (atlas.png)",
+    )
+    arg_parser.add_argument("--map-output")
+    arg_parser.add_argument("--map-format", choices={"json", "binary"}, default="json")
+    arg_parser.add_argument(
+        "-m",
+        "--mode",
+        metavar="mode",
+        type=str,
+        default="RGBA",
+        help="output file mode (RGBA)",
+    )
+    arg_parser.add_argument(
+        "-s",
+        "--size",
+        metavar="size",
+        type=int,
+        default=512,
+        help="size of atlas (n x n)",
+    )
+    arg_parser.add_argument(
+        "textures", metavar="texture", type=str, nargs="+", help="filename of texture"
+    )
 
     args = arg_parser.parse_args()
     filename, ext = os.path.splitext(args.outfile)
 
-    if ext == '':
-        print('Error: Specify an image extension for outfile (e.g. atlas.png).')
+    if ext == "":
+        print("Error: Specify an image extension for outfile (e.g. atlas.png).")
         exit(1)
 
     # Parse texture names
     textures = []
     for texture in args.textures:
         # Look for a texture name
-        matches = re.match(r'^((\w+)=)?(.+)', texture)
+        matches = re.match(r"^((\w+)=)?(.+)", texture)
         name, frames = matches.group(2), shlex.split(matches.group(3))
 
         # If no name was specified, use the first frame's filename
@@ -382,7 +407,7 @@ def main():
         textures.append(Texture(name, frames))
 
     # Sort textures by perimeter size in non-increasing order
-    textures = sorted(textures, key=lambda i:i.frames[0].perimeter, reverse=True)
+    textures = sorted(textures, key=lambda i: i.frames[0].perimeter, reverse=True)
 
     # Create the atlas and pack textures in
     atlas = TextureAtlas(args.size, args.size)
@@ -391,15 +416,16 @@ def main():
         atlas.pack(texture)
 
     atlas.write(args.outfile, args.mode)
-    map_path = args.map_output or args.filename + '.map'
+    map_path = args.map_output or args.filename + ".map"
 
     match args.map_format:
-        case 'json':
-            with open(map_path, 'w', encoding='utf-8') as file:
+        case "json":
+            with open(map_path, "w", encoding="utf-8") as file:
                 JsonTextureAtlasMap(atlas).write(file)
-        case 'binary':
-            with open(map_path, 'wb') as file:
+        case "binary":
+            with open(map_path, "wb") as file:
                 BinaryTextureAtlasMap(atlas).write(file)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
