@@ -29,6 +29,7 @@ import os.path
 import re
 import shlex
 import struct
+import textwrap
 
 from dataclasses import dataclass
 from typing import TextIO, BinaryIO
@@ -285,27 +286,43 @@ class JsonTextureAtlasMap:
 
 
 def main():
-    desc = """Packs many smaller images into one larger image, a Texture
-    Atlas. A companion file (.map), is created that defines where each texture is
-    mapped in the atlas."""
+    desc = """
+        Packs many smaller images into one larger image, a Texture Atlas. A
+        companion file (.map), is created that defines where each texture is
+        mapped in the atlas.
+        """
 
     # Parse arguments
     arg_parser = argparse.ArgumentParser(
-        description=desc, formatter_class=argparse.RawDescriptionHelpFormatter
+        description=textwrap.dedent(desc),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     arg_parser.add_argument(
         "-o",
-        dest="outfile",
-        metavar="output-file",
+        "--output-image-filename",
+        metavar="output-image-filename",
         type=str,
         default="atlas.png",
-        help="output filename (atlas.png)",
+        help="output image filename (atlas.png)",
     )
-    arg_parser.add_argument("--map-output")
-    arg_parser.add_argument("--map-format", choices={"json", "binary"}, default="json")
     arg_parser.add_argument(
         "-m",
-        "--mode",
+        "--output-map-filename",
+        metavar="output-map-filename",
+        type=str,
+        default="",
+        help="output map filename (atlas.map)",
+    )
+    arg_parser.add_argument(
+        "-mf",
+        "--map-format",
+        choices={"json", "binary"},
+        default="json",
+        help="format of map output",
+    )
+    arg_parser.add_argument(
+        "-im",
+        "--image-mode",
         metavar="mode",
         type=str,
         default="RGBA",
@@ -316,10 +333,12 @@ def main():
     )
 
     args = arg_parser.parse_args()
-    filename, ext = os.path.splitext(args.outfile)
+    filename, ext = os.path.splitext(args.output_image_filename)
 
     if ext == "":
-        print("Error: Specify an image extension for outfile (e.g. atlas.png).")
+        print(
+            "Error: Specify an image extension for output_image_filename (e.g. atlas.png)."
+        )
         exit(1)
 
     # Parse texture names
@@ -362,8 +381,8 @@ def main():
             atlas = TextureAtlas(width, height)
             break
 
-    atlas.write(args.outfile, args.mode)
-    map_path = args.map_output or (filename + ".map")
+    atlas.write(args.output_image_filename, args.image_mode)
+    map_path = args.output_map_filename or (filename + ".map")
 
     match args.map_format:
         case "json":
