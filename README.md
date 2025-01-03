@@ -38,9 +38,8 @@ including **PNG, BMP, GIF, JPEG, and TGA**.
 
 ### System Requirements
 
-* [Python 2.7](http://www.python.org/)
-* [Python Image Library (PIL)](http://www.pythonware.com/products/pil/) or
-  [Pillow](http://pillow.readthedocs.org/en/latest/).
+* [Python 3](http://www.python.org/)
+* [Pillow](http://pillow.readthedocs.org/en/latest/)
 
 ### Usage
 
